@@ -45,6 +45,12 @@ This repository is the new project home. The original prototype is currently
 kept outside this repository as `RQD_MVP_V0` and will be migrated carefully into
 a modular architecture.
 
+## Run Locally
+
+```bash
+python -m streamlit run app/streamlit_app.py
+```
+
 ## First Milestone
 
 The first usable release will focus on:

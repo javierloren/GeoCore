@@ -45,6 +45,20 @@ class Borehole:
     lithology: list[LithologyInterval] = field(default_factory=list)
     core_runs: list[CoreRun] = field(default_factory=list)
 
+    @property
+    def average_rqd_percent(self) -> float | None:
+        values = [run.rqd_percent for run in self.core_runs if run.rqd_percent is not None]
+        if not values:
+            return None
+        return sum(values) / len(values)
+
+    @property
+    def average_recovery_percent(self) -> float | None:
+        values = [run.recovery_percent for run in self.core_runs if run.recovery_percent is not None]
+        if not values:
+            return None
+        return sum(values) / len(values)
+
 
 @dataclass
 class Project:
