@@ -1,0 +1,26 @@
+[project]
+name = "geocore"
+version = "0.1.0"
+description = "Open-source geotechnical engineering suite."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [
+  { name = "GeoCore contributors" }
+]
+dependencies = [
+  "streamlit",
+  "requests",
+  "pillow",
+  "numpy",
+  "streamlit-image-coordinates",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
