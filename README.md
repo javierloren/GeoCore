@@ -57,4 +57,3 @@ deliverable.
 ## License
 
 GeoCore is intended to be free and open source. See [LICENSE](LICENSE).
-
