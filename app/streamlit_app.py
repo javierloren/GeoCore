@@ -12,6 +12,12 @@ from geocore.sample_data import demo_project
 from geocore.vision import roboflow_outline_infer
 
 
+DEFAULT_ROBOFLOW_DATASET_SLUG = "software-szwke"
+DEFAULT_ROBOFLOW_MODEL_VERSION = 3
+DEFAULT_ROBOFLOW_CONFIDENCE = 35
+DEFAULT_ROBOFLOW_OVERLAP = 30
+
+
 st.set_page_config(page_title="GeoCore", layout="wide")
 
 
@@ -204,7 +210,7 @@ def project_dashboard(project) -> None:
         """
         <div class="gc-module-grid">
           <div class="gc-module"><strong>Borehole Manager</strong><span>Collars, surveys, lithology, groundwater, samples, runs.</span><small>Active</small></div>
-          <div class="gc-module"><strong>Core Logging</strong><span>Core box photographs, recovery, RQD, discontinuity review.</span><small>Next</small></div>
+          <div class="gc-module"><strong>Core Box Vision</strong><span>Upload core photographs, review segmentation, calculate RQD.</span><small>Active</small></div>
           <div class="gc-module"><strong>Log Designer</strong><span>Professional borehole logs with tracks and templates.</span><small>Started</small></div>
           <div class="gc-module"><strong>Rock Mechanics</strong><span>RMR, Q-System, GSI, fracture frequency and UCS inputs.</span><small>Planned</small></div>
           <div class="gc-module"><strong>Slope Stability</strong><span>SSAP-style limit equilibrium workflows and validation cases.</span><small>Planned</small></div>
@@ -280,10 +286,10 @@ def core_box_vision_panel() -> None:
     _init_core_box_state()
 
     api_key = st.secrets.get("ROBOFLOW_API_KEY", "")
-    dataset_slug = (st.secrets.get("ROBOFLOW_DATASET_SLUG", "") or "").strip()
-    version = int(st.secrets.get("ROBOFLOW_MODEL_VERSION", 1))
-    confidence = int(st.secrets.get("ROBOFLOW_CONFIDENCE", 35))
-    overlap = int(st.secrets.get("ROBOFLOW_OVERLAP", 30))
+    dataset_slug = (st.secrets.get("ROBOFLOW_DATASET_SLUG", DEFAULT_ROBOFLOW_DATASET_SLUG) or "").strip()
+    version = int(st.secrets.get("ROBOFLOW_MODEL_VERSION", DEFAULT_ROBOFLOW_MODEL_VERSION))
+    confidence = int(st.secrets.get("ROBOFLOW_CONFIDENCE", DEFAULT_ROBOFLOW_CONFIDENCE))
+    overlap = int(st.secrets.get("ROBOFLOW_OVERLAP", DEFAULT_ROBOFLOW_OVERLAP))
 
     config_cols = st.columns([0.16, 0.16, 0.16, 0.16, 0.36])
     orientation_ui = config_cols[0].selectbox("Orientation", ["L->R", "R->L"])
@@ -291,6 +297,7 @@ def core_box_vision_panel() -> None:
     lane_length_cm = config_cols[2].number_input("Row length (cm)", min_value=10.0, value=60.0, step=1.0)
     threshold_cm = config_cols[3].number_input("RQD threshold (cm)", min_value=1.0, value=10.0, step=1.0)
     uploaded = config_cols[4].file_uploader("Core box photo", type=["jpg", "jpeg", "png"])
+    st.caption(f"Roboflow model: `{dataset_slug}/{version}` | Confidence: {confidence}% | Overlap: {overlap}%")
 
     if uploaded is not None:
         image_bytes = uploaded.getvalue()
@@ -343,8 +350,8 @@ def core_box_vision_panel() -> None:
             st.rerun()
 
     with right:
-        if not api_key or not dataset_slug:
-            st.warning("Roboflow is not configured. Add ROBOFLOW_API_KEY and ROBOFLOW_DATASET_SLUG to Streamlit secrets.")
+        if not api_key:
+            st.warning("Roboflow API key is missing. Add ROBOFLOW_API_KEY to Streamlit secrets to process uploaded photos.")
             return
 
         pred = _get_or_run_inference(image_bytes, dataset_slug, version, api_key, confidence, overlap)
@@ -550,6 +557,7 @@ with st.sidebar:
             "Project Dashboard",
             "Borehole Manager",
             "Core Logging",
+            "Core Box Vision",
             "Log Viewer",
             "Analysis Center",
             "Reports",
@@ -573,6 +581,9 @@ elif module == "Borehole Manager":
     borehole_manager(project)
 elif module == "Core Logging":
     core_logging(project)
+elif module == "Core Box Vision":
+    st.markdown("#### Core Box Vision")
+    core_box_vision_panel()
 elif module == "Log Viewer":
     log_viewer(project)
 elif module == "Analysis Center":
