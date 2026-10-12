@@ -60,6 +60,22 @@ desktop and web/demo interfaces.
 python -m streamlit run app/streamlit_app.py
 ```
 
+For the Core Box Vision workflow, configure these Streamlit secrets:
+
+```toml
+ROBOFLOW_API_KEY = "..."
+ROBOFLOW_DATASET_SLUG = "..."
+ROBOFLOW_MODEL_VERSION = 1
+ROBOFLOW_CONFIDENCE = 35
+ROBOFLOW_OVERLAP = 30
+```
+
+When deploying from GitHub to Streamlit Community Cloud, use:
+
+```text
+app/streamlit_app.py
+```
+
 ## First Milestone
 
 The first usable release will focus on:

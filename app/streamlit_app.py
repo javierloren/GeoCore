@@ -1,9 +1,15 @@
+import hashlib
+import io
+
 import streamlit as st
 import streamlit.components.v1 as components
+from PIL import Image, ImageDraw
+from streamlit_image_coordinates import streamlit_image_coordinates
 
-from geocore.calculations import compute_rqd_from_piece_lengths
+from geocore.calculations import compute_rqd_by_intervals, compute_rqd_from_piece_lengths
 from geocore.reports.borehole_log import borehole_log_svg
 from geocore.sample_data import demo_project
+from geocore.vision import roboflow_outline_infer
 
 
 st.set_page_config(page_title="GeoCore", layout="wide")
@@ -266,6 +272,110 @@ def core_logging(project) -> None:
             m3.metric("Quality", overall["quality"])
             st.dataframe(result["intervals"], use_container_width=True, hide_index=True)
 
+    st.markdown("#### Core Box Vision")
+    core_box_vision_panel()
+
+
+def core_box_vision_panel() -> None:
+    _init_core_box_state()
+
+    api_key = st.secrets.get("ROBOFLOW_API_KEY", "")
+    dataset_slug = (st.secrets.get("ROBOFLOW_DATASET_SLUG", "") or "").strip()
+    version = int(st.secrets.get("ROBOFLOW_MODEL_VERSION", 1))
+    confidence = int(st.secrets.get("ROBOFLOW_CONFIDENCE", 35))
+    overlap = int(st.secrets.get("ROBOFLOW_OVERLAP", 30))
+
+    config_cols = st.columns([0.16, 0.16, 0.16, 0.16, 0.36])
+    orientation_ui = config_cols[0].selectbox("Orientation", ["L->R", "R->L"])
+    n_lanes = config_cols[1].number_input("Rows", min_value=1, max_value=8, value=4, step=1)
+    lane_length_cm = config_cols[2].number_input("Row length (cm)", min_value=10.0, value=60.0, step=1.0)
+    threshold_cm = config_cols[3].number_input("RQD threshold (cm)", min_value=1.0, value=10.0, step=1.0)
+    uploaded = config_cols[4].file_uploader("Core box photo", type=["jpg", "jpeg", "png"])
+
+    if uploaded is not None:
+        image_bytes = uploaded.getvalue()
+        image_hash = hashlib.sha256(image_bytes).hexdigest()
+        if st.session_state.corebox_image_hash != image_hash:
+            st.session_state.corebox_image_hash = image_hash
+            st.session_state.corebox_image_bytes = image_bytes
+            st.session_state.corebox_points = []
+            st.session_state.corebox_last_click = None
+            st.session_state.corebox_click_key += 1
+            st.session_state.corebox_result = None
+
+    if st.session_state.corebox_image_bytes is None:
+        st.info("Upload a core box photograph to calculate RQD from image segmentation.")
+        return
+
+    image_bytes = st.session_state.corebox_image_bytes
+    image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    img_w, img_h = image.size
+
+    left, right = st.columns([0.58, 0.42])
+    with left:
+        st.caption("Click the center of each core block/taco that defines the calculation intervals.")
+        display, scale = _display_image_with_points(image, st.session_state.corebox_points)
+        coords = streamlit_image_coordinates(
+            display,
+            key=f"corebox_clicks_{st.session_state.corebox_click_key}",
+            width=display.size[0],
+        )
+        if coords and "x" in coords and "y" in coords:
+            x_orig = float(coords["x"]) / scale
+            y_orig = float(coords["y"]) / scale
+            sig = (round(x_orig, 1), round(y_orig, 1))
+            if sig != st.session_state.corebox_last_click:
+                st.session_state.corebox_points.append((x_orig, y_orig))
+                st.session_state.corebox_last_click = sig
+                st.rerun()
+
+        c1, c2, c3 = st.columns([0.2, 0.2, 0.6])
+        c1.write(f"Blocks: **{len(st.session_state.corebox_points)}**")
+        if c2.button("Undo", disabled=not st.session_state.corebox_points, use_container_width=True):
+            st.session_state.corebox_points.pop()
+            st.session_state.corebox_click_key += 1
+            st.session_state.corebox_result = None
+            st.rerun()
+        if c3.button("Clear selected blocks", disabled=not st.session_state.corebox_points, use_container_width=True):
+            st.session_state.corebox_points = []
+            st.session_state.corebox_click_key += 1
+            st.session_state.corebox_result = None
+            st.rerun()
+
+    with right:
+        if not api_key or not dataset_slug:
+            st.warning("Roboflow is not configured. Add ROBOFLOW_API_KEY and ROBOFLOW_DATASET_SLUG to Streamlit secrets.")
+            return
+
+        pred = _get_or_run_inference(image_bytes, dataset_slug, version, api_key, confidence, overlap)
+        predictions = pred.get("predictions", []) if pred else []
+        st.image(_overlay_predictions(image, predictions), caption="Segmentation overlay", use_container_width=True)
+
+        can_calc = len(st.session_state.corebox_points) >= 2 and len(predictions) > 0
+        if st.button("Calculate image RQD", type="primary", disabled=not can_calc, use_container_width=True):
+            st.session_state.corebox_result = compute_rqd_by_intervals(
+                predictions=predictions,
+                block_points_xy=st.session_state.corebox_points,
+                img_w=img_w,
+                img_h=img_h,
+                n_lanes=int(n_lanes),
+                lane_length_cm=float(lane_length_cm),
+                threshold_cm=float(threshold_cm),
+                orientation="L2R" if orientation_ui.startswith("L") else "R2L",
+            )
+
+        if st.session_state.corebox_result:
+            result = st.session_state.corebox_result
+            if "error" in result:
+                st.warning(result["error"])
+            else:
+                overall = result["overall"]
+                st.metric("Image RQD", f'{overall["RQD_%"]:.1f}%', help=overall["quality"])
+                st.caption(
+                    f'Denominator: {overall["denom_cm"]} cm | Intact >= {threshold_cm:.0f} cm: {overall["intact_length_cm"]} cm'
+                )
+                st.dataframe(result["intervals"], use_container_width=True, hide_index=True)
+
 
 def log_viewer(project) -> None:
     borehole = select_borehole(project)
@@ -342,6 +452,86 @@ def _parse_float_list(value: str) -> list[float] | None:
         return [float(item.strip().replace(",", ".")) for item in value.replace(";", ",").split(",") if item.strip()]
     except ValueError:
         return None
+
+
+def _init_core_box_state() -> None:
+    defaults = {
+        "corebox_image_bytes": None,
+        "corebox_image_hash": None,
+        "corebox_points": [],
+        "corebox_last_click": None,
+        "corebox_click_key": 0,
+        "corebox_pred_cache": None,
+        "corebox_pred_cache_key": None,
+        "corebox_result": None,
+    }
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
+
+
+def _display_image_with_points(image: Image.Image, points: list[tuple[float, float]]) -> tuple[Image.Image, float]:
+    base_max_w = 950
+    scale = min(1.0, base_max_w / float(image.size[0]))
+    display = image.resize((int(image.size[0] * scale), int(image.size[1] * scale)), Image.LANCZOS)
+    draw = ImageDraw.Draw(display)
+    for idx, (x0, y0) in enumerate(points, start=1):
+        x, y = x0 * scale, y0 * scale
+        draw.ellipse((x - 8, y - 8, x + 8, y + 8), outline="lime", width=3)
+        draw.text((x + 10, y - 10), str(idx), fill="lime")
+    return display, scale
+
+
+def _get_or_run_inference(
+    image_bytes: bytes,
+    dataset_slug: str,
+    version: int,
+    api_key: str,
+    confidence: int,
+    overlap: int,
+) -> dict:
+    cache_key = (hashlib.sha256(image_bytes).hexdigest(), dataset_slug, version, confidence, overlap)
+    if st.session_state.corebox_pred_cache_key == cache_key:
+        return st.session_state.corebox_pred_cache
+
+    try:
+        with st.spinner("Processing image..."):
+            pred = roboflow_outline_infer(
+                image_bytes=image_bytes,
+                dataset_slug=dataset_slug,
+                version=version,
+                api_key=api_key,
+                confidence=confidence,
+                overlap=overlap,
+            )
+    except Exception:
+        st.error("The image could not be processed. Check Roboflow secrets and try again.")
+        pred = {"predictions": []}
+
+    st.session_state.corebox_pred_cache = pred
+    st.session_state.corebox_pred_cache_key = cache_key
+    return pred
+
+
+def _overlay_predictions(image: Image.Image, predictions: list[dict]) -> Image.Image:
+    overlay = image.copy()
+    draw = ImageDraw.Draw(overlay)
+    color_map = {
+        "roca sana": "magenta",
+        "roca_sana": "magenta",
+        "rocasana": "magenta",
+        "fracturas": "red",
+        "fractura": "red",
+        "suelo": "cyan",
+        "soil": "cyan",
+    }
+    for prediction in predictions:
+        pts = prediction.get("points", [])
+        cls = (prediction.get("class") or "").strip().lower()
+        poly = [(point["x"], point["y"]) for point in pts if "x" in point and "y" in point]
+        if len(poly) >= 3:
+            draw.polygon(poly, outline=color_map.get(cls, "yellow"), width=2)
+    return overlay
 
 
 inject_css()
