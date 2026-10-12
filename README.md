@@ -5,6 +5,10 @@ Its goal is to make professional geotechnical workflows accessible to students,
 universities, small consultants, and practitioners who cannot afford expensive
 commercial licenses.
 
+The long-term product direction is a downloadable desktop application in the
+spirit of QGIS: local projects, local data, local calculations, plugin-friendly
+modules, and optional web/demo tooling.
+
 The project starts from the ideas and prototype work in `RQD_MVP_V0`: image-based
 RQD calculation from core box photographs, borehole registration, stratigraphic
 columns, and report exports.
@@ -45,6 +49,11 @@ This repository is the new project home. The original prototype is currently
 kept outside this repository as `RQD_MVP_V0` and will be migrated carefully into
 a modular architecture.
 
+The current Streamlit app is the prototype workbench. It is useful for building
+and testing the geotechnical core, but it is not the final product target. The
+final target is GeoCore Desktop, with the shared Python core reused by both
+desktop and web/demo interfaces.
+
 ## Run Locally
 
 ```bash
@@ -59,6 +68,17 @@ The first usable release will focus on:
 
 This gives users a complete workflow from field/core-box data to a professional
 deliverable.
+
+## Product Direction
+
+GeoCore should grow toward:
+
+- GeoCore Desktop: the main downloadable application.
+- GeoCore Web: demo, teaching, and lightweight public access.
+- GeoCore Core: reusable Python models, calculations, reports, imports, exports,
+  and computer vision.
+- GeoCore Plugins: future extension points for specialist tools such as RQD
+  Vision, RMR/Q/GSI, slope stability, stereonets, CPT, foundations, and GIS.
 
 ## License
 

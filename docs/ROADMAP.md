@@ -13,7 +13,7 @@ Status: started.
 - Keep `RQD_MVP_V0` as the reference prototype until migration.
 - Decide the initial technical architecture.
 
-## Phase 1: GeoCore Core Logger
+## Phase 1: GeoCore Core Logger Prototype
 
 Target outcome:
 
@@ -38,7 +38,25 @@ Features:
 This is the first release that can genuinely help a student or engineer produce
 a professional deliverable.
 
-## Phase 2: Rock Mechanics
+## Phase 2: Desktop Foundation
+
+Target outcome:
+
+`GeoCore Desktop -> Local project -> Borehole Manager -> Log Viewer`
+
+Features:
+
+- Desktop shell using Python + PySide6/Qt.
+- Project tree similar in spirit to QGIS.
+- Local project storage with SQLite/JSON first.
+- Reuse of the same `geocore` Python package used by Streamlit.
+- Open/save project workflow.
+- Foundation for a future `.geocore` project format.
+
+Streamlit remains the prototype/demo interface. Desktop becomes the main product
+direction once the core data model and logging workflow are stable.
+
+## Phase 3: Rock Mechanics
 
 Features:
 
@@ -50,7 +68,7 @@ Features:
 - UCS and point load inputs.
 - Transparent calculation sheets and report sections.
 
-## Phase 3: Soil, SPT, CPT, and Laboratory Data
+## Phase 4: Soil, SPT, CPT, and Laboratory Data
 
 Features:
 
@@ -61,7 +79,7 @@ Features:
 - Laboratory samples and tests.
 - Grain size, Atterberg limits, moisture, density, strength, consolidation.
 
-## Phase 4: Maps, Sections, and Interoperability
+## Phase 5: Maps, Sections, and Interoperability
 
 Features:
 
@@ -72,7 +90,7 @@ Features:
 - Stratigraphic correlation tools.
 - Project-level reports.
 
-## Phase 5: Slope Stability
+## Phase 6: Slope Stability
 
 Features:
 
@@ -88,7 +106,7 @@ Features:
 This module must be treated carefully because wrong results can affect safety.
 It needs strong validation before being presented as engineering software.
 
-## Phase 6: Advanced Suite
+## Phase 7: Plugin Platform and Advanced Suite
 
 Possible future modules:
 
@@ -99,5 +117,6 @@ Possible future modules:
 - Rock wedge/toppling checks.
 - Simple 3D borehole visualization.
 - Cloud collaboration.
-- Desktop/local packaged app.
+- Plugin API and plugin manager.
+- Packaged installers for Windows, Linux, and macOS.
 

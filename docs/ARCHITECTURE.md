@@ -1,9 +1,13 @@
 # Initial Architecture
 
 GeoCore will start as a Streamlit application because the prototype already uses
-Streamlit and it allows fast public deployment. The code must still be organized
-as a normal Python package so that calculations, reporting, and data models can
-be tested outside the UI.
+Streamlit and it allows fast public deployment. The final product direction is a
+downloadable desktop application, likely Python + PySide6/Qt, with Streamlit kept
+as a prototype/demo interface.
+
+The code must therefore be organized as a normal Python package so calculations,
+reporting, imports, exports, storage, and computer vision can be tested outside
+any UI and reused by both Streamlit and the future desktop application.
 
 ## Proposed Structure
 
@@ -12,6 +16,8 @@ geocore/
   app/
     streamlit_app.py
     pages/
+  desktop/
+    main.py
   geocore/
     models/
     storage/
@@ -33,8 +39,8 @@ test, groundwater record, discontinuity, and report metadata.
 
 `storage`
 
-Local SQLite/JSON persistence first. Later this can support PostgreSQL for a
-public hosted instance.
+Local SQLite/JSON persistence first. Later this can support a `.geocore` project
+container and optional PostgreSQL for hosted/demo instances.
 
 `vision`
 
@@ -58,6 +64,22 @@ Borehole logs and PDF reports.
 `exports`
 
 CSV, Excel, GeoJSON, AGS, and other open formats.
+
+## Desktop Direction
+
+GeoCore Desktop should eventually become the main product:
+
+- Python + PySide6/Qt interface.
+- Local project files, with SQLite/DuckDB and project folders or zipped
+  `.geocore` packages.
+- Local images, PDFs, imported data, and model assets.
+- Local computer vision inference where possible.
+- No mandatory server dependency.
+- Future plugin API for specialist modules.
+
+Streamlit remains useful while the geotechnical core is still moving quickly.
+The rule is simple: no engineering calculation should depend on `st.session_state`
+or Streamlit widgets.
 
 ## First Migration Target
 

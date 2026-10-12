@@ -3,6 +3,10 @@
 GeoCore should feel like a professional geoscience and geotechnical workbench,
 not like a marketing page or a simple calculator.
 
+The long-term interface model is closer to QGIS than to a web dashboard: project
+tree, menus, toolbars, dockable panels, editable tables, maps/plots/log previews,
+and local project files.
+
 The initial visual reference is the family of commercial tools used in the
 market: RockWorks, LogPlot, RSLog, OpenGround, Dips, and slope stability
 software. The interface should be dense, structured, and oriented to repeated
@@ -11,6 +15,7 @@ engineering work.
 ## Layout Principles
 
 - A left project/module navigator.
+- A project tree with boreholes, samples, laboratory data, documents, and maps.
 - A compact ribbon for common operations.
 - Central editable data tables.
 - Right-side or lower preview panels for logs, reports, maps, and plots.
@@ -29,6 +34,7 @@ engineering work.
 
 ## Future Visual Targets
 
+- Desktop project workspace similar in spirit to QGIS.
 - Borehole database and operations similar in spirit to RockWorks.
 - Log preview/design workflow similar in spirit to LogPlot.
 - Structural geology and stereonet tools similar in spirit to Dips.

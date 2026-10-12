@@ -14,6 +14,10 @@ The goal is not only to create calculators. The goal is to create a coherent
 workspace where geotechnical data can be entered, reviewed, interpreted,
 calculated, visualized, exported, and reported.
 
+The guiding analogy is QGIS for geotechnics: a free desktop application that
+users can download, install, extend, and use locally without sending confidential
+project data to someone else's server.
+
 ## Positioning
 
 GeoCore should compete first with workflows from:
@@ -46,14 +50,27 @@ GeoCore should let a user complete a real investigation workflow:
 8. Generate project reports.
 9. Export data in open formats.
 
+## Distribution Promise
+
+GeoCore should eventually be available as:
+
+- A downloadable desktop application for Windows, Linux, and macOS.
+- A local project format, such as `.geocore`, containing the database, images,
+  reports, and project assets.
+- A lightweight web/demo version for teaching, testing, and public examples.
+- Source code on GitHub so universities, students, and professionals can inspect,
+  run, modify, and contribute.
+
 ## Design Principles
 
 - Free for everyone.
 - Open source by default.
 - Transparent calculations.
 - Useful offline or self-hosted.
+- Desktop-first long term, web-friendly during prototyping.
 - Professional reports, not toy outputs.
 - Modular architecture.
+- Plugin-friendly architecture.
 - AI-assisted, never AI-authoritative.
 - International by design, with English and Spanish as initial languages.
 - Built for students and professionals, not only developers.
