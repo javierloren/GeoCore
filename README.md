@@ -74,6 +74,9 @@ ROBOFLOW_OVERLAP = 30
 `ROBOFLOW_OVERLAP` already have defaults matching the current MVP model
 `software-szwke/3`. `ROBOFLOW_API_KEY` is required for image processing.
 
+Never commit real API keys. Use `.streamlit/secrets.toml` locally and Streamlit
+Community Cloud secrets in deployment. See [docs/SECRETS.md](docs/SECRETS.md).
+
 When deploying from GitHub to Streamlit Community Cloud, use:
 
 ```text

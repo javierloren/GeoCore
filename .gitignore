@@ -2,7 +2,15 @@ __pycache__/
 *.py[cod]
 .venv/
 .env
+.env.*
+!.env.example
 .streamlit/secrets.toml
+*.key
+*.pem
+*.p12
+*.pfx
+credentials.json
+secrets.json
 .pytest_cache/
 .ruff_cache/
 dist/
