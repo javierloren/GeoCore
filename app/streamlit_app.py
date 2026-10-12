@@ -1,6 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
+from geocore.calculations import compute_rqd_from_piece_lengths
 from geocore.reports.borehole_log import borehole_log_svg
 from geocore.sample_data import demo_project
 
@@ -244,7 +245,26 @@ def core_logging(project) -> None:
         for run in borehole.core_runs
     ]
     st.data_editor(rows, use_container_width=True, hide_index=True, num_rows="dynamic")
-    st.info("The next implementation step is migrating the RQD vision workflow from RQD_MVP_V0 into this module.")
+
+    st.markdown("#### Manual RQD Calculator")
+    c1, c2, c3 = st.columns([0.18, 0.18, 0.64])
+    run_length_cm = c1.number_input("Run length (cm)", min_value=1.0, value=150.0, step=1.0)
+    threshold_cm = c2.number_input("Threshold (cm)", min_value=1.0, value=10.0, step=1.0)
+    pieces_text = c3.text_input("Intact pieces (cm)", value="8, 12, 25, 5, 30")
+    pieces = _parse_float_list(pieces_text)
+    if pieces is None:
+        st.warning("Use comma-separated numeric lengths, for example: 8, 12, 25, 5, 30")
+    else:
+        result = compute_rqd_from_piece_lengths(run_length_cm, pieces, threshold_cm)
+        if "error" in result:
+            st.warning(result["error"])
+        else:
+            overall = result["overall"]
+            m1, m2, m3 = st.columns(3)
+            m1.metric("RQD", f'{overall["RQD_%"]:.1f}%')
+            m2.metric("Intact >= threshold", f'{overall["intact_length_cm"]:.1f} cm')
+            m3.metric("Quality", overall["quality"])
+            st.dataframe(result["intervals"], use_container_width=True, hide_index=True)
 
 
 def log_viewer(project) -> None:
@@ -315,6 +335,13 @@ def select_borehole(project):
 
 def _fmt_percent(value: float | None) -> str:
     return "-" if value is None else f"{value:.0f}"
+
+
+def _parse_float_list(value: str) -> list[float] | None:
+    try:
+        return [float(item.strip().replace(",", ".")) for item in value.replace(";", ",").split(",") if item.strip()]
+    except ValueError:
+        return None
 
 
 inject_css()
