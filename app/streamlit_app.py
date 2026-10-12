@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw
 from streamlit_image_coordinates import streamlit_image_coordinates
 
 from geocore.calculations import compute_rqd_by_intervals, compute_rqd_from_piece_lengths
-from geocore.reports.borehole_log import borehole_log_svg
+from geocore.reports import borehole_log_svg, borehole_report_html
 from geocore.sample_data import demo_project
 from geocore.vision import roboflow_outline_infer
 
@@ -431,12 +431,25 @@ def analysis_center() -> None:
     )
 
 
-def reports_center() -> None:
+def reports_center(project) -> None:
     st.markdown("#### Reports and Exports")
-    st.write("Planned deliverables for V1.0:")
+    borehole = select_borehole(project)
+    html_report = borehole_report_html(project, borehole)
+    st.download_button(
+        "Download borehole HTML report",
+        data=html_report.encode("utf-8"),
+        file_name=f"{borehole.borehole_id}_geocore_report.html",
+        mime="text/html",
+        use_container_width=True,
+    )
+    with st.expander("Preview report HTML"):
+        components.html(html_report, height=720, scrolling=True)
+
+    st.markdown("#### Roadmap")
     st.table(
         [
-            {"Output": "Borehole PDF", "Status": "Next", "Content": "Header, log, RQD/recovery, photos, notes"},
+            {"Output": "Borehole HTML", "Status": "Active", "Content": "Header, log, RQD/recovery, lithology, core runs"},
+            {"Output": "Borehole PDF", "Status": "Next", "Content": "Print-ready PDF export"},
             {"Output": "Project PDF", "Status": "Planned", "Content": "All boreholes, summary tables, annexes"},
             {"Output": "CSV/Excel", "Status": "Planned", "Content": "Project, boreholes, lithology, runs, tests"},
             {"Output": "AGS", "Status": "Future", "Content": "Professional geotechnical interchange"},
@@ -589,5 +602,5 @@ elif module == "Log Viewer":
 elif module == "Analysis Center":
     analysis_center()
 else:
-    reports_center()
+    reports_center(project)
 
