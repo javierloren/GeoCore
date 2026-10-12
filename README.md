@@ -64,15 +64,16 @@ For the Core Box Vision workflow, configure these Streamlit secrets:
 
 ```toml
 ROBOFLOW_API_KEY = "..."
-ROBOFLOW_DATASET_SLUG = "software-szwke"
-ROBOFLOW_MODEL_VERSION = 3
+ROBOFLOW_WORKSPACE = "tfm-w79wc"
+ROBOFLOW_WORKFLOW_ID = "software-v3-logic"
 ROBOFLOW_CONFIDENCE = 35
 ROBOFLOW_OVERLAP = 30
 ```
 
-`ROBOFLOW_DATASET_SLUG`, `ROBOFLOW_MODEL_VERSION`, `ROBOFLOW_CONFIDENCE`, and
-`ROBOFLOW_OVERLAP` already have defaults matching the current MVP model
-`software-szwke/3`. `ROBOFLOW_API_KEY` is required for image processing.
+`ROBOFLOW_WORKSPACE`, `ROBOFLOW_WORKFLOW_ID`, `ROBOFLOW_CONFIDENCE`, and
+`ROBOFLOW_OVERLAP` already have defaults matching the current MVP workflow
+`tfm-w79wc/software-v3-logic`. `ROBOFLOW_API_KEY` is required for image
+processing.
 
 Never commit real API keys. Use `.streamlit/secrets.toml` locally and Streamlit
 Community Cloud secrets in deployment. See [docs/SECRETS.md](docs/SECRETS.md).

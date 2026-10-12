@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import base64
 import io
+import time
 from typing import Any
+
+
+class RoboflowInferenceError(RuntimeError):
+    pass
 
 
 def prepare_image_for_inference(
@@ -56,59 +61,71 @@ def rescale_predictions_to_original(
     return pred
 
 
-def roboflow_outline_infer(
+def roboflow_workflow_infer(
     image_bytes: bytes,
-    dataset_slug: str,
-    version: int,
+    workspace_name: str,
+    workflow_id: str,
     api_key: str,
-    confidence: int = 35,
-    overlap: int = 30,
-    max_w: int = 1600,
-    jpeg_quality: int = 85,
+    parameters: dict[str, Any] | None = None,
+    timeout: int = 60,
+    retries: int = 2,
 ) -> dict[str, Any]:
-    url = f"https://outline.roboflow.com/{dataset_slug}/{version}"
-    attempts = [
-        (max_w, jpeg_quality),
-        (1400, min(jpeg_quality, 80)),
-        (1200, min(jpeg_quality, 75)),
-        (1000, min(jpeg_quality, 70)),
-    ]
+    img_b64 = base64.b64encode(image_bytes).decode("utf-8")
+    payload = {
+        "inputs": {"image": {"type": "base64", "value": img_b64}},
+        "parameters": parameters or {},
+    }
+    url = f"https://serverless.roboflow.com/{workspace_name}/workflows/{workflow_id}"
     last_err = None
 
-    for width, quality in attempts:
-        infer_bytes, orig_w, orig_h, inf_w, inf_h = prepare_image_for_inference(
-            image_bytes,
-            width,
-            quality,
-        )
-        img_b64 = base64.b64encode(infer_bytes).decode("utf-8")
-
+    for attempt in range(retries + 1):
         try:
             import requests
 
             response = requests.post(
                 url,
-                params={
-                    "api_key": api_key,
-                    "confidence": confidence,
-                    "overlap": overlap,
+                json=payload,
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
                 },
-                data=img_b64,
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
-                timeout=60,
+                timeout=timeout,
             )
-            if response.status_code == 413:
-                last_err = RuntimeError("Image too large. Retrying with stronger compression.")
-                continue
-
             response.raise_for_status()
-            sx = orig_w / float(inf_w)
-            sy = orig_h / float(inf_h)
-            return rescale_predictions_to_original(response.json(), sx, sy, orig_w, orig_h)
+            return response.json()
         except Exception as exc:
             last_err = exc
-            response = getattr(exc, "response", None)
-            if response is not None and 400 <= response.status_code < 500 and response.status_code != 413:
-                break
+            if attempt < retries:
+                time.sleep(0.5 * (2**attempt))
 
-    raise RuntimeError("Inference could not be completed.") from last_err
+    raise RoboflowInferenceError("Roboflow workflow inference failed.") from last_err
+
+
+def extract_first_predictions(response: Any) -> list[dict[str, Any]]:
+    found = _find_prediction_lists(response)
+    return found[0] if found else []
+
+
+def _find_prediction_lists(value: Any) -> list[list[dict[str, Any]]]:
+    if isinstance(value, dict):
+        matches = []
+        predictions = value.get("predictions")
+        if _looks_like_predictions(predictions):
+            matches.append(predictions)
+        for child in value.values():
+            matches.extend(_find_prediction_lists(child))
+        return matches
+    if isinstance(value, list):
+        matches = []
+        for item in value:
+            matches.extend(_find_prediction_lists(item))
+        return matches
+    return []
+
+
+def _looks_like_predictions(value: Any) -> bool:
+    return (
+        isinstance(value, list)
+        and all(isinstance(item, dict) for item in value)
+        and any("points" in item or "x" in item or "width" in item for item in value)
+    )

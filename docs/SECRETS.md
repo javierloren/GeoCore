@@ -15,8 +15,8 @@ Use this structure:
 
 ```toml
 ROBOFLOW_API_KEY = "your-private-key"
-ROBOFLOW_DATASET_SLUG = "software-szwke"
-ROBOFLOW_MODEL_VERSION = 3
+ROBOFLOW_WORKSPACE = "tfm-w79wc"
+ROBOFLOW_WORKFLOW_ID = "software-v3-logic"
 ROBOFLOW_CONFIDENCE = 35
 ROBOFLOW_OVERLAP = 30
 ```

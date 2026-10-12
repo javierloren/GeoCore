@@ -9,11 +9,11 @@ from streamlit_image_coordinates import streamlit_image_coordinates
 from geocore.calculations import compute_rqd_by_intervals, compute_rqd_from_piece_lengths
 from geocore.reports import borehole_log_svg, borehole_report_html
 from geocore.sample_data import demo_project
-from geocore.vision import roboflow_outline_infer
+from geocore.vision import extract_first_predictions, roboflow_workflow_infer
 
 
-DEFAULT_ROBOFLOW_DATASET_SLUG = "software-szwke"
-DEFAULT_ROBOFLOW_MODEL_VERSION = 3
+DEFAULT_ROBOFLOW_WORKSPACE = "tfm-w79wc"
+DEFAULT_ROBOFLOW_WORKFLOW_ID = "software-v3-logic"
 DEFAULT_ROBOFLOW_CONFIDENCE = 35
 DEFAULT_ROBOFLOW_OVERLAP = 30
 
@@ -286,8 +286,8 @@ def core_box_vision_panel() -> None:
     _init_core_box_state()
 
     api_key = st.secrets.get("ROBOFLOW_API_KEY", "")
-    dataset_slug = (st.secrets.get("ROBOFLOW_DATASET_SLUG", DEFAULT_ROBOFLOW_DATASET_SLUG) or "").strip()
-    version = int(st.secrets.get("ROBOFLOW_MODEL_VERSION", DEFAULT_ROBOFLOW_MODEL_VERSION))
+    workspace_name = (st.secrets.get("ROBOFLOW_WORKSPACE", DEFAULT_ROBOFLOW_WORKSPACE) or "").strip()
+    workflow_id = (st.secrets.get("ROBOFLOW_WORKFLOW_ID", DEFAULT_ROBOFLOW_WORKFLOW_ID) or "").strip()
     confidence = int(st.secrets.get("ROBOFLOW_CONFIDENCE", DEFAULT_ROBOFLOW_CONFIDENCE))
     overlap = int(st.secrets.get("ROBOFLOW_OVERLAP", DEFAULT_ROBOFLOW_OVERLAP))
 
@@ -297,7 +297,7 @@ def core_box_vision_panel() -> None:
     lane_length_cm = config_cols[2].number_input("Row length (cm)", min_value=10.0, value=60.0, step=1.0)
     threshold_cm = config_cols[3].number_input("RQD threshold (cm)", min_value=1.0, value=10.0, step=1.0)
     uploaded = config_cols[4].file_uploader("Core box photo", type=["jpg", "jpeg", "png"])
-    st.caption(f"Roboflow model: `{dataset_slug}/{version}` | Confidence: {confidence}% | Overlap: {overlap}%")
+    st.caption(f"Roboflow workflow: `{workspace_name}/{workflow_id}` | Confidence: {confidence}% | Overlap: {overlap}%")
 
     if uploaded is not None:
         image_bytes = uploaded.getvalue()
@@ -354,8 +354,8 @@ def core_box_vision_panel() -> None:
             st.warning("Roboflow API key is missing. Add ROBOFLOW_API_KEY to Streamlit secrets to process uploaded photos.")
             return
 
-        pred = _get_or_run_inference(image_bytes, dataset_slug, version, api_key, confidence, overlap)
-        predictions = pred.get("predictions", []) if pred else []
+        pred = _get_or_run_inference(image_bytes, workspace_name, workflow_id, api_key, confidence, overlap)
+        predictions = extract_first_predictions(pred)
         st.image(_overlay_predictions(image, predictions), caption="Segmentation overlay", use_container_width=True)
 
         can_calc = len(st.session_state.corebox_points) >= 2 and len(predictions) > 0
@@ -504,25 +504,24 @@ def _display_image_with_points(image: Image.Image, points: list[tuple[float, flo
 
 def _get_or_run_inference(
     image_bytes: bytes,
-    dataset_slug: str,
-    version: int,
+    workspace_name: str,
+    workflow_id: str,
     api_key: str,
     confidence: int,
     overlap: int,
 ) -> dict:
-    cache_key = (hashlib.sha256(image_bytes).hexdigest(), dataset_slug, version, confidence, overlap)
+    cache_key = (hashlib.sha256(image_bytes).hexdigest(), workspace_name, workflow_id, confidence, overlap)
     if st.session_state.corebox_pred_cache_key == cache_key:
         return st.session_state.corebox_pred_cache
 
     try:
         with st.spinner("Processing image..."):
-            pred = roboflow_outline_infer(
+            pred = roboflow_workflow_infer(
                 image_bytes=image_bytes,
-                dataset_slug=dataset_slug,
-                version=version,
+                workspace_name=workspace_name,
+                workflow_id=workflow_id,
                 api_key=api_key,
-                confidence=confidence,
-                overlap=overlap,
+                parameters={"confidence": confidence, "overlap": overlap},
             )
     except Exception:
         st.error("The image could not be processed. Check Roboflow secrets and try again.")
